@@ -47,3 +47,20 @@ class FuzzySigmoidLayer(nn.Module):
 
         out = torch.bmm(fuzzy_W, x_vec).squeeze(2) + self.bias  # (B, output_dim)
         return self.norm(F.relu(out)), μ
+    # ===== Sparse Threshold Autoencoder =====
+class SparseThresholdAutoencoder(nn.Module):
+    def __init__(self, input_dim, latent_dim, threshold=0.1):
+        super(SparseThresholdAutoencoder, self).__init__()
+        self.encoder = nn.Linear(input_dim, latent_dim)
+        self.decoder = nn.Linear(latent_dim, input_dim)
+        self.threshold = threshold
+
+    def apply_threshold(self, z):
+        return torch.where(z >= self.threshold, z, torch.zeros_like(z))
+
+    def forward(self, x):
+        z = torch.relu(self.encoder(x))
+        z_sparse = self.apply_threshold(z)
+        x_recon = torch.sigmoid(self.decoder(z_sparse))
+        return x_recon, z_sparse
+
